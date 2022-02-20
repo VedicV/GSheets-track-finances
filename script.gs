@@ -182,7 +182,7 @@ function getTransactions() {
 
       for (var i in transactions) {
 
-        transactionsSheet.getRange(row_counter,1).setValue([transactions[i].valueDate]);
+        transactionsSheet.getRange(row_counter,1).setValue([transactions[i].bookingDate]);
 
         if (transactions[i].creditorName) {
             var trx_text = transactions[i].creditorName
