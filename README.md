@@ -19,4 +19,4 @@ Go to Nordigens's [Open Banking Portal](https://ob.nordigen.com/) and get your o
 
 #### Copy Google Sheets File
 
-Make a Copy of this [Google Sheets File](https://docs.google.com/spreadsheets/d/1u9UgOnBb8fb_fdobJBE8QparO-UTX4eK2RRSnO-KhiE/edit#gid=0).
+Make a Copy of this [Google Sheets File](https://docs.google.com/spreadsheets/d/18uWVg7WuN7HgIgC5llq3vupP_P26KbJo_RWD0XoauH4/edit#gid=0).
