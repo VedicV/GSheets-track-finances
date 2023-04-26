@@ -1,210 +1,141 @@
-function getBanks() {
+const ss = SpreadsheetApp.getActiveSpreadsheet();
+const mainSheet = ss.getSheetByName("Connection");
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mainSheet = ss.getSheetByName("Connection");
+function getToken() {
 
-  // get token 
-  var userid = mainSheet.getRange("B25").getValue();
-  var userkey = mainSheet.getRange("B28").getValue();
+  const userid = mainSheet.getRange("B25").getValue();
+  const userkey = mainSheet.getRange("B28").getValue();
 
-  var raw = JSON.stringify({"secret_id":userid,"secret_key":userkey});
-  var myHeaders = {"accept": "application/json",
-                   "Content-Type": "application/json"}
+  let raw = JSON.stringify({ "secret_id": userid, "secret_key": userkey });
+  let myHeaders = { "accept": "application/json", "Content-Type": "application/json" }
 
-  var requestOptions = {
+  let requestOptions = {
     'method': 'POST',
     'headers': myHeaders,
-    'payload': raw
+    'payload': raw,
   };
 
-  var response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/token/new/", requestOptions);
-  var json = response.getContentText();
-  var token = JSON.parse(json).access;
+  let response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/token/new/", requestOptions);
+  let json = response.getContentText();
+  let token = JSON.parse(json).access;
 
-  // get banks
-  mainSheet.getRange("J1:J1000").clear();
-  var country = mainSheet.getRange("B34").getValue();
+  return token
+}
 
-  var url = "https://ob.nordigen.com/api/v2/institutions/?country="+country;
-  var headers = {
-             "headers":{"accept": "application/json",
-                        "Authorization": "Bearer " + token}
-             };
+function getBanks() {
 
-  var response = UrlFetchApp.fetch(url, headers);
-  var json = response.getContentText();
-  var data = JSON.parse(json);
+  mainSheet.getRange("J1:J").clear();
 
-  for (var i in data) {
-  mainSheet.getRange(Number(i)+1,10).setValue([data[i].name]);
-  }
-  
+  let data = getBanksList();
+  let bankList = data.map(bank => [bank.name]);
+
+  mainSheet.getRange(1, 10).setValues(bankList);
+}
+
+function getBanksList() {
+  const token = getToken();
+  let country = mainSheet.getRange("B34").getValue();
+
+  let url = "https://ob.nordigen.com/api/v2/institutions/?country=" + country;
+  let headers = {
+    "headers": {
+      "accept": "application/json",
+      "Authorization": "Bearer " + token
+    }
+  };
+
+  let response = UrlFetchApp.fetch(url, headers);
+  let json = response.getContentText();
+  let data = JSON.parse(json);
+  return data
 }
 
 function createLink() {
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mainSheet = ss.getSheetByName("Connection");
-
-  // get token 
-  var userid = mainSheet.getRange("B25").getValue();
-  var userkey = mainSheet.getRange("B28").getValue();
-
-  var raw = JSON.stringify({"secret_id":userid,"secret_key":userkey});
-  var myHeaders = {"accept": "application/json",
-                   "Content-Type": "application/json"}
-
-  var requestOptions = {
-    'method': 'POST',
-    'headers': myHeaders,
-    'payload': raw
-  };
-
-  var response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/token/new/", requestOptions);
-  var json = response.getContentText();
-  var token = JSON.parse(json).access;
-
-  // create link
-
-  var bank = mainSheet.getRange("B43").getValue();
-  var country = mainSheet.getRange("B34").getValue();
-
-  var url = "https://ob.nordigen.com/api/v2/institutions/?country="+country;
-  var headers = {
-             "headers":{"accept": "application/json",
-                        "Authorization": "Bearer " + token}
-             };
-
-  var response = UrlFetchApp.fetch(url, headers);
-  var json = response.getContentText();
-  var data = JSON.parse(json);
-
-  for (var j in data) {
-    if (data[j].name == bank) {
+  // get Bank id 
+  let bank = mainSheet.getRange("B43").getValue();
+  let data = getBanksList();
+  for (let j in data) {
+    if (data[j].name == bank)
       var institution_id = data[j].id;
-    }
   }
 
-  var myHeaders = {"accept": "application/json",
-                   "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token}
+  // get requisition ID
+  const token = getToken();
+  let myHeaders = {
+    "accept": "application/json",
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  }
 
-  var SS = SpreadsheetApp.getActiveSpreadsheet();
-  var ss = SS.getActiveSheet();
-  var redirect_link = '';
-  redirect_link += SS.getUrl();
-  redirect_link += '#gid=';
-  redirect_link += ss.getSheetId(); 
+  let sheetID = mainSheet.getSheetId();
+  let redirect_link = ss.getUrl() + '#gid=' + sheetID;
 
-  var raw = JSON.stringify({"redirect":redirect_link, "institution_id":institution_id});
-  var type = "application/json";
+  let raw = JSON.stringify({ "redirect": redirect_link, "institution_id": institution_id });
 
-  var requestOptions = {
+  let requestOptions = {
     'method': 'POST',
     'headers': myHeaders,
     'payload': raw
   };
 
-  var response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/requisitions/", requestOptions);
-  var json = response.getContentText();
-  var requisition_id = JSON.parse(json).id;
+  let response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/requisitions/", requestOptions);
+  let json = JSON.parse(response.getContentText());
 
-  var myHeaders = {"accept": "application/json",
-                   "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token}
+  let requisition_id = json.id;
+  let link = json.link;
 
-  var json = response.getContentText();
+  mainSheet.getRange(53, 2).setValue(link);
+  mainSheet.getRange(1, 12).setValue(requisition_id);
 
-  var link = JSON.parse(json).link;
-
-  mainSheet.getRange(53,2).setValue([link]);
-  mainSheet.getRange(1,12).setValue([requisition_id]);
-  
 }
 
 function getTransactions() {
 
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var mainSheet = ss.getSheetByName("Connection");
-  var transactionsSheet = ss.getSheetByName("Transactions");
+  const transactionsSheet = ss.getSheetByName("Transactions");
 
   transactionsSheet.getRange("A2:A1000").clearContent();
   transactionsSheet.getRange("B2:B1000").clearContent();
   transactionsSheet.getRange("C2:C1000").clearContent();
 
-  // get token 
-  var userid = mainSheet.getRange("B25").getValue();
-  var userkey = mainSheet.getRange("B28").getValue();
-
-  var raw = JSON.stringify({"secret_id":userid,"secret_key":userkey});
-  var myHeaders = {"accept": "application/json",
-                   "Content-Type": "application/json"}
-
-  var requestOptions = {
-    'method': 'POST',
-    'headers': myHeaders,
-    'payload': raw
-  };
-
-  var response = UrlFetchApp.fetch("https://ob.nordigen.com/api/v2/token/new/", requestOptions);
-  var json = response.getContentText();
-  var token = JSON.parse(json).access;
+  const token = getToken();
 
   // get transactions
+  let requisition_id = mainSheet.getRange("L1").getValue();
 
-  var requisition_id = mainSheet.getRange("L1").getValue();
+  let urlReq = "https://ob.nordigen.com/api/v2/requisitions/" + requisition_id + "/";
+  let requestOptions = {
+    "headers": {
+      "accept": "application/json",
+      "Authorization": "Bearer " + token
+    }
+  };
 
-  var url = "https://ob.nordigen.com/api/v2/requisitions/" + requisition_id + "/";
-  var headers = {
-             "headers":{"accept": "application/json",
-                        "Authorization": "Bearer " + token}
-             };
+  let response = UrlFetchApp.fetch(urlReq, requestOptions);
+  let json = response.getContentText();
+  let accounts = JSON.parse(json).accounts;
 
-  var response = UrlFetchApp.fetch(url, headers);
-  var json = response.getContentText();
-  var accounts = JSON.parse(json).accounts;
-  
-  row_counter = 2
+  let dataTable = [];
 
-  for (var i in accounts) {
+  for (let i in accounts) {
 
-      var account_id = accounts[i]
+    let account_id = accounts[i];
+    let urlAcconts = "https://ob.nordigen.com/api/v2/accounts/" + account_id + "/transactions/";
 
-      var url = "https://ob.nordigen.com/api/v2/accounts/" + account_id + "/transactions/";
-      var headers = {
-                "headers":{"accept": "application/json",
-                            "Authorization": "Bearer " + token}
-                };
+    let response = UrlFetchApp.fetch(urlAcconts, requestOptions);
+    let json = response.getContentText();
+    let transactions = JSON.parse(json).transactions.booked;
 
-      var response = UrlFetchApp.fetch(url, headers);
-      var json = response.getContentText();
-      var transactions = JSON.parse(json).transactions.booked;
+    for (let j in transactions) {
+      let row = transactions[j];
 
-      for (var i in transactions) {
+      dataTable.push([
+        row.bookingDate || '',
+        row.creditorName || row.debitorName || row.remittanceInformationUnstructured || row.remittanceInformationUnstructuredArray || '',
+        row.transactionAmount.amount || '',
+      ])
 
-        transactionsSheet.getRange(row_counter,1).setValue([transactions[i].bookingDate]);
-
-        if (transactions[i].creditorName) {
-            var trx_text = transactions[i].creditorName
-        } 
-        else if (transactions[i].debitorName) {
-            var trx_text = transactions[i].debitorName
-        } 
-        else if (transactions[i].remittanceInformationUnstructured) {
-            var trx_text = transactions[i].remittanceInformationUnstructured
-        } 
-        else if (transactions[i].remittanceInformationUnstructuredArray) {
-            var trx_text = transactions[i].remittanceInformationUnstructuredArray
-        } else {
-          var trx_text = ""
-        }
-        
-        transactionsSheet.getRange(row_counter,2).setValue([trx_text]);
-        transactionsSheet.getRange(row_counter,3).setValue([transactions[i].transactionAmount.amount]);
-
-        row_counter += 1
+    }
+    transactionsSheet.getRange(2, 1, dataTable.length, dataTable[0].length).setValues(dataTable);
   }
-
-  }
-    
 }
